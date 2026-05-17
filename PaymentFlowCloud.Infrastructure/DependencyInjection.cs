@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PaymentFlowCloud.Application.Abstractions;
 using PaymentFlowCloud.Infrastructure.Messaging;
 using PaymentFlowCloud.Infrastructure.Persistence;
+using PaymentFlowCloud.Infrastructure.Providers;
 
 namespace PaymentFlowCloud.Infrastructure;
 
@@ -13,7 +14,7 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // 基础设施层集中绑定数据库和消息队列实现，API/Worker 只调用扩展方法。
+        // 基础设施层集中绑定数据库、消息队列和外部支付提供方实现。
         services.AddDbContext<PaymentDbContext>(options =>
         {
             options.UseSqlServer(
@@ -22,12 +23,22 @@ public static class DependencyInjection
 
         services.Configure<RabbitMqOptions>(
             configuration.GetSection("RabbitMQ"));
+        services.Configure<FakePaymentProviderOptions>(
+            configuration.GetSection("FakeProvider"));
 
-        // 应用层依赖抽象，具体实现统一在 Infrastructure 里注册。
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddSingleton<RabbitMqConnectionFactory>();
         services.AddSingleton<IPaymentEventPublisher, RabbitMqPaymentEventPublisher>();
+
+        services.AddHttpClient<IPaymentProviderClient, FakePaymentProviderClient>((serviceProvider, client) =>
+        {
+            var options = serviceProvider
+                .GetRequiredService<Microsoft.Extensions.Options.IOptions<FakePaymentProviderOptions>>()
+                .Value;
+
+            client.BaseAddress = new Uri(options.BaseUrl);
+        });
 
         return services;
     }

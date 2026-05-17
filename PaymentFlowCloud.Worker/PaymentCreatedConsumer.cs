@@ -1,4 +1,5 @@
 using System.Text.Json;
+using PaymentFlowCloud.Application.Abstractions;
 using PaymentFlowCloud.Application.Contracts;
 using PaymentFlowCloud.Application.Payments;
 using PaymentFlowCloud.Infrastructure.Messaging;
@@ -98,12 +99,24 @@ public class PaymentCreatedConsumer(
 
             // 每条消息创建独立 DI scope，确保 DbContext 生命周期正确。
             using var serviceScope = serviceScopeFactory.CreateScope();
+            var getPaymentService = serviceScope.ServiceProvider.GetRequiredService<GetPaymentService>();
+            var paymentProviderClient = serviceScope.ServiceProvider.GetRequiredService<IPaymentProviderClient>();
             var processPaymentService = serviceScope.ServiceProvider.GetRequiredService<ProcessPaymentService>();
 
-            var processed = await processPaymentService.MarkProcessedAsync(
+            var payment = await getPaymentService.GetByIdAsync(message.PaymentId, cancellationToken);
+            if (payment is null)
+            {
+                // 支付记录暂时查不到时按固定次数重试，超过后进入 DLQ。
+                await RetryOrMoveToDeadLetterQueueAsync(channel, eventArgs, cancellationToken);
+                return;
+            }
+
+            await paymentProviderClient.SubmitPaymentAsync(payment, cancellationToken);
+
+            var processingStarted = await processPaymentService.MarkProcessingAsync(
                 message.PaymentId,
                 cancellationToken);
-            if (!processed)
+            if (!processingStarted)
             {
                 // 支付记录暂时查不到时按固定次数重试，超过后进入 DLQ。
                 await RetryOrMoveToDeadLetterQueueAsync(channel, eventArgs, cancellationToken);
@@ -113,7 +126,7 @@ public class PaymentCreatedConsumer(
             // 应用层处理成功后再 ack，确保消息不会提前丢失。
             await channel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false, cancellationToken);
             logger.LogInformation(
-                "Processed payment-created message for payment {PaymentId}",
+                "Payment-created message submitted to provider for payment {PaymentId}",
                 message.PaymentId);
         }
         catch (Exception ex)

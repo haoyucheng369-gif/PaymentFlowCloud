@@ -72,6 +72,8 @@ services:
         condition: service_healthy
       api:
         condition: service_started
+      provider-mock:
+        condition: service_started
     environment:
       DOTNET_ENVIRONMENT: "Development"
       ConnectionStrings__SqlServer: "Server=sqlserver,1433;Database=PaymentFlowCloudDb;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;"
@@ -83,6 +85,19 @@ services:
       RabbitMQ__DeadLetterQueueName: "payment-created-dlq"
       RabbitMQ__MaxRetryCount: "3"
       Seq__ServerUrl: "http://seq:80"
+      FakeProvider__BaseUrl: "http://provider-mock:8080"
+      FakeProvider__WebhookUrl: "http://api:8080/webhooks/fake-provider/payment-succeeded"
+
+  provider-mock:
+    build:
+      context: .
+      dockerfile: PaymentFlowCloud.ProviderMock/Dockerfile
+    container_name: paymentflowcloud-provider-mock
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+      Seq__ServerUrl: "http://seq:80"
+    ports:
+      - "5290:8080"
 
   web:
     build:

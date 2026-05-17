@@ -90,7 +90,9 @@ POST /payments
 -> Payment created
 -> payment-created message published
 -> Worker consumed message
--> Payment processed
+-> Worker calls Fake Provider
+-> Payment processing
+-> Fake Provider webhook marks Payment succeeded
 -> Order marked paid
 ```
 
@@ -134,6 +136,39 @@ Use the Queues tab to inspect:
 payment-created
 payment-created-dlq
 ```
+
+## Fake Provider and Webhook Flow
+
+The local stack includes a minimal fake payment provider.
+
+Current flow:
+
+```text
+POST /payments
+-> API stores Payment as Pending
+-> API publishes payment-created
+-> Worker consumes payment-created
+-> Worker calls Fake Provider
+-> Fake Provider returns Accepted
+-> Worker marks Payment as Processing
+-> Fake Provider calls API webhook
+-> API marks Payment as Succeeded
+-> API marks Order as Paid
+```
+
+Local fake provider endpoint:
+
+```text
+http://localhost:5290/provider/payments
+```
+
+Webhook endpoint exposed by the API:
+
+```text
+POST /webhooks/fake-provider/payment-succeeded
+```
+
+This first version intentionally skips provider signatures and delayed retry queues. It focuses on the minimum async provider callback lifecycle.
 
 ---
 

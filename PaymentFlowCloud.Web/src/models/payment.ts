@@ -3,7 +3,7 @@
  *
  * Payment 现在基于 Order 创建；同一个 OrderId 重复 Pay 应该返回同一笔 Payment。
  */
-export type PaymentStatus = 'Pending' | 'Processed' | 'Failed'
+export type PaymentStatus = 'Pending' | 'Processing' | 'Succeeded' | 'Failed'
 
 export type Payment = {
   id: string
@@ -15,4 +15,3 @@ export type Payment = {
   correlationId: string
   createdAt: string
 }
-

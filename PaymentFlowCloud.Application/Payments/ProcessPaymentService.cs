@@ -4,11 +4,10 @@ using PaymentFlowCloud.Application.Abstractions;
 namespace PaymentFlowCloud.Application.Payments;
 
 public class ProcessPaymentService(
-    IOrderRepository orderRepository,
     IPaymentRepository paymentRepository,
     ILogger<ProcessPaymentService> logger)
 {
-    public async Task<bool> MarkProcessedAsync(
+    public async Task<bool> MarkProcessingAsync(
         Guid paymentId,
         CancellationToken cancellationToken = default)
     {
@@ -21,20 +20,13 @@ public class ProcessPaymentService(
             return false;
         }
 
-        payment.MarkProcessed();
-
-        if (payment.OrderId is not null)
-        {
-            var order = await orderRepository.FindByIdAsync(payment.OrderId.Value, cancellationToken);
-            order?.MarkPaid();
-        }
+        payment.MarkProcessing();
 
         await paymentRepository.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Payment {PaymentId} processed and order {OrderId} marked paid",
-            payment.Id,
-            payment.OrderId);
+            "Payment {PaymentId} marked processing after fake provider accepted it",
+            payment.Id);
 
         return true;
     }

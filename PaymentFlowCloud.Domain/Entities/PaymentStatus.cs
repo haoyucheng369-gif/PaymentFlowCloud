@@ -3,6 +3,7 @@ namespace PaymentFlowCloud.Domain.Entities;
 public enum PaymentStatus
 {
     Pending,
-    Processed,
+    Processing,
+    Succeeded,
     Failed
 }

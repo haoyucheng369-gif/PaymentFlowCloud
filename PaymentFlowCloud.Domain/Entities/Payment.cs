@@ -1,5 +1,5 @@
-using Stateless;
 using System.Text.Json.Serialization;
+using Stateless;
 
 namespace PaymentFlowCloud.Domain.Entities;
 
@@ -24,10 +24,16 @@ public class Payment
     [JsonIgnore]
     public Order? Order { get; set; }
 
-    public void MarkProcessed()
+    public void MarkProcessing()
     {
-        // Worker 成功处理消息后触发 Process 流转。
+        // Worker 调用支付提供方并收到 accepted 后，支付进入等待最终结果的处理中状态。
         Fire(PaymentTrigger.Process);
+    }
+
+    public void MarkSucceeded()
+    {
+        // Webhook 确认支付成功后，支付进入最终成功状态；重复成功回调保持幂等。
+        Fire(PaymentTrigger.Succeed);
     }
 
     public void MarkFailed()
@@ -57,11 +63,18 @@ public class Payment
             status => Status = status);
 
         stateMachine.Configure(PaymentStatus.Pending)
-            .Permit(PaymentTrigger.Process, PaymentStatus.Processed)
+            .Permit(PaymentTrigger.Process, PaymentStatus.Processing)
+            .Permit(PaymentTrigger.Succeed, PaymentStatus.Succeeded)
             .Permit(PaymentTrigger.Fail, PaymentStatus.Failed);
 
-        stateMachine.Configure(PaymentStatus.Processed)
-            .Ignore(PaymentTrigger.Process);
+        stateMachine.Configure(PaymentStatus.Processing)
+            .Ignore(PaymentTrigger.Process)
+            .Permit(PaymentTrigger.Succeed, PaymentStatus.Succeeded)
+            .Permit(PaymentTrigger.Fail, PaymentStatus.Failed);
+
+        stateMachine.Configure(PaymentStatus.Succeeded)
+            .Ignore(PaymentTrigger.Process)
+            .Ignore(PaymentTrigger.Succeed);
 
         stateMachine.Configure(PaymentStatus.Failed)
             .Ignore(PaymentTrigger.Fail);
