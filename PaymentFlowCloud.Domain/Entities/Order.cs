@@ -16,11 +16,10 @@ public class Order
 
     public void MarkPaid()
     {
-        // 支付处理成功后，订单从待支付流转到已支付。
+        // 支付成功 webhook 到达后，订单从待支付流转到已支付；重复回调保持幂等。
         if (Status == OrderStatus.PendingPayment)
         {
             Status = OrderStatus.Paid;
         }
     }
 }
-

@@ -10,7 +10,7 @@ import { createCorrelationId } from '../utils/ids'
 /**
  * 结账支付流程 Hook
  *
- * 管理真实一点的本地流程：Create Order -> Pay -> Worker 更新支付状态。
+ * 管理真实一点的本地流程：Create Order -> Pay -> Provider webhook 更新支付状态。
  */
 export function useCheckoutPayment() {
   const [order, setOrder] = useState<Order | null>(null)
@@ -52,9 +52,9 @@ export function useCheckoutPayment() {
         const nextPayment = await getPayment(paymentId)
         setPayment(nextPayment)
 
-        if (nextPayment.status === 'Processed') {
+        if (nextPayment.status === 'Succeeded') {
           stopPolling()
-          addActivity('GET /payments/{id}', 'Processed')
+          addActivity('GET /payments/{id}', 'Succeeded')
         }
       } catch (ex) {
         setError(ex instanceof Error ? ex.message : 'Payment lookup failed.')
@@ -67,7 +67,7 @@ export function useCheckoutPayment() {
     (paymentId: string) => {
       stopPolling()
 
-      // 后端通过 Worker 异步更新状态，前端只做轻量轮询展示 Pending -> Processed。
+      // 后端通过 Worker 和 provider webhook 异步更新状态，前端只做轻量轮询展示 Pending -> Processing -> Succeeded。
       pollTimerRef.current = window.setInterval(() => {
         void refreshPayment(paymentId)
       }, 1000)
@@ -153,4 +153,3 @@ export function useCheckoutPayment() {
     startNewOrder,
   }
 }
-

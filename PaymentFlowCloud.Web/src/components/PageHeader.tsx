@@ -11,8 +11,8 @@ type PageHeaderProps = {
  * 只展示当前支付流程的全局状态，不负责请求或业务判断。
  */
 export function PageHeader({ payment }: PageHeaderProps) {
-  const isProcessed = payment?.status === 'Processed'
-  const statusClassName = isProcessed
+  const isSucceeded = payment?.status === 'Succeeded'
+  const statusClassName = isSucceeded
     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
     : 'border-slate-200 bg-white text-slate-600'
 
@@ -25,7 +25,7 @@ export function PageHeader({ payment }: PageHeaderProps) {
       <div
         className={`inline-flex min-h-9 w-fit items-center gap-2 rounded-full border px-3.5 text-sm font-semibold ${statusClassName}`}
       >
-        {isProcessed ? (
+        {isSucceeded ? (
           <CheckCircle2 size={16} aria-hidden="true" />
         ) : (
           <Loader2 size={16} className={payment ? 'animate-spin' : undefined} aria-hidden="true" />

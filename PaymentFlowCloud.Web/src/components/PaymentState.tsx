@@ -11,7 +11,7 @@ type PaymentStateProps = {
 /**
  * 支付结果和请求日志
  *
- * 只展示 API 返回结果和最近请求记录，方便观察 Pending 到 Processed 的异步变化。
+ * 只展示 API 返回结果和最近请求记录，方便观察 Pending 到 Processing 再到 Succeeded 的异步变化。
  */
 export function PaymentState({ payment, error, activity }: PaymentStateProps) {
   return (
@@ -66,4 +66,3 @@ export function PaymentState({ payment, error, activity }: PaymentStateProps) {
     </section>
   )
 }
-
